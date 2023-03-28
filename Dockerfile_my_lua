@@ -1,0 +1,26 @@
+FROM debian:9 as build
+ENV LUAJIT_LIB=/usr/local/lib
+ENV LUAJIT_INC=/usr/local/include/luajit-2.0
+
+RUN apt update && apt install -y wget gcc make libpcre3-dev libz-dev
+
+RUN wget                                   http://luajit.org/download/LuaJIT-2.0.5.tar.gz                                  && tar xvfz LuaJIT-2.0.5.tar.gz            && cd LuaJIT-2.0.5 && make install
+RUN wget -O nginx_devel_kit.tar.gz         https://github.com/vision5/ngx_devel_kit/archive/refs/tags/v0.3.2.tar.gz        && tar xvfz nginx_devel_kit.tar.gz 
+RUN wget -O nginx-lua-module.tar.gz        https://github.com/openresty/lua-nginx-module/archive/refs/tags/v0.10.24.tar.gz && tar xvfz nginx-lua-module.tar.gz
+RUN wget -O lua-resty-core-0.1.26.tar.gz   https://github.com/openresty/lua-resty-core/archive/refs/tags/v0.1.26.tar.gz    && tar xvfz lua-resty-core-0.1.26.tar.gz   && cd lua-resty-core-0.1.26 && make install
+RUN wget -O lua-resty-lrucache-0.13.tar.gz https://github.com/openresty/lua-resty-lrucache/archive/refs/tags/v0.13.tar.gz  && tar xvfz lua-resty-lrucache-0.13.tar.gz && cd lua-resty-lrucache-0.13 && make install
+RUN wget https://nginx.org/download/nginx-1.23.3.tar.gz && tar xvfz nginx-1.23.3.tar.gz && cd nginx-1.23.3 && ./configure \
+															--add-module=../ngx_devel_kit-0.3.2 \
+															--add-module=../lua-nginx-module-0.10.24 \
+															--with-ld-opt='-Wl,-rpath,/usr/local/lib' \
+															&& make && make install
+
+FROM debian:9
+WORKDIR /usr/local/nginx/sbin
+COPY --from=build /usr/local/nginx/sbin/nginx .
+COPY --from=build /usr/local/lib/libluajit-5.1.so.2 /usr/local/lib/
+COPY --from=build /usr/local/include/luajit-2.0     /usr/local/include/luajit-2.0
+COPY --from=build /usr/local/share/luajit-2.0.5     /usr/local/share/luajit-2.0.5
+COPY --from=build /usr/local/lib/lua/               /usr/local/lib/lua/
+RUN mkdir ../logs ../conf && touch ../logs/error.log && chmod +x nginx
+CMD ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;"]
