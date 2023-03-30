@@ -10,23 +10,37 @@ ENV NGINX_VER=1.23.3
 
 RUN apt update && apt install -y wget gcc make libpcre3-dev libz-dev
 
-RUN wget                                   http://luajit.org/download/LuaJIT-$LUAJIT_VER.tar.gz                                  && tar xvfz LuaJIT-$LUAJIT_VER.tar.gz            && cd LuaJIT-$LUAJIT_VER && make install
-RUN wget -O nginx_devel_kit.tar.gz         https://github.com/vision5/ngx_devel_kit/archive/refs/tags/v$NGINX_DEV_KIT_VER.tar.gz        && tar xvfz nginx_devel_kit.tar.gz 
-RUN wget -O nginx-lua-module.tar.gz        https://github.com/openresty/lua-nginx-module/archive/refs/tags/v$NGINX_LUA_VER.tar.gz && tar xvfz nginx-lua-module.tar.gz
-RUN wget -O lua-resty-core-0.1.26.tar.gz   https://github.com/openresty/lua-resty-core/archive/refs/tags/v$LUA_RESTY_CORE_VER.tar.gz    && tar xvfz lua-resty-core-$LUA_RESTY_CORE_VER.tar.gz   && cd lua-resty-core-$LUA_RESTY_CORE_VER && make install
-RUN wget -O lua-resty-lrucache-0.13.tar.gz https://github.com/openresty/lua-resty-lrucache/archive/refs/tags/v0.13.tar.gz  && tar xvfz lua-resty-lrucache-$LUA_RESTY_LRUCACHE_VER.tar.gz && cd lua-resty-lrucache-$LUA_RESTY_LRUCACHE_VER && make install
-RUN wget https://nginx.org/download/nginx-$NGINX_VER.tar.gz && tar xvfz nginx-$NGINX_VER.tar.gz && cd nginx-$NGINX_VER && ./configure \
-															--add-module=../ngx_devel_kit-$NGINX_DEV_KIT_VER \
-															--add-module=../lua-nginx-module-$NGINX_LUA_VER \
-															--with-ld-opt='-Wl,-rpath,/usr/local/lib' \
-															&& make && make install
+RUN wget http://luajit.org/download/LuaJIT-$LUAJIT_VER.tar.gz \
+    && tar xvfz LuaJIT-$LUAJIT_VER.tar.gz \
+    && cd LuaJIT-$LUAJIT_VER \
+    && make install
+RUN wget https://github.com/vision5/ngx_devel_kit/archive/refs/tags/v$NGINX_DEV_KIT_VER.tar.gz -O nginx_devel_kit.tar.gz \
+    && tar xvfz nginx_devel_kit.tar.gz 
+RUN wget https://github.com/openresty/lua-nginx-module/archive/refs/tags/v$NGINX_LUA_VER.tar.gz -O nginx-lua-module.tar.gz \
+    && tar xvfz nginx-lua-module.tar.gz
+RUN wget https://github.com/openresty/lua-resty-core/archive/refs/tags/v$LUA_RESTY_CORE_VER.tar.gz -O lua-resty-core-0.1.26.tar.gz \
+    && tar xvfz lua-resty-core-$LUA_RESTY_CORE_VER.tar.gz \
+    && cd lua-resty-core-$LUA_RESTY_CORE_VER \
+    && make install
+RUN wget https://github.com/openresty/lua-resty-lrucache/archive/refs/tags/v$LUA_RESTY_LRUCACHE_VER.tar.gz -O lua-resty-lrucache-$LUA_RESTY_LRUCACHE_VER.tar.gz \
+    && tar xvfz lua-resty-lrucache-$LUA_RESTY_LRUCACHE_VER.tar.gz \
+    && cd lua-resty-lrucache-$LUA_RESTY_LRUCACHE_VER \
+    && make install
+RUN wget https://nginx.org/download/nginx-$NGINX_VER.tar.gz \ 
+    && tar xvfz nginx-$NGINX_VER.tar.gz \
+    && cd nginx-$NGINX_VER \
+    && ./configure --add-module=../ngx_devel_kit-$NGINX_DEV_KIT_VER \
+                   --add-module=../lua-nginx-module-$NGINX_LUA_VER \
+                   --with-ld-opt='-Wl,-rpath,/usr/local/lib' \
+    && make \
+    && make install
 
 FROM debian:9
 WORKDIR /usr/local/nginx/sbin
 COPY --from=build /usr/local/nginx/sbin/nginx .
-COPY --from=build /usr/local/lib/libluajit-5.1.so.2 /usr/local/lib/
-COPY --from=build /usr/local/include/luajit-2.0     /usr/local/include/luajit-2.0
-COPY --from=build /usr/local/share/luajit-2.0.5     /usr/local/share/luajit-2.0.5
-COPY --from=build /usr/local/lib/lua/               /usr/local/lib/lua/
+COPY --from=build /usr/local/lib/libluajit-5.1.so.2   /usr/local/lib/
+COPY --from=build /usr/local/include/luajit-2.0       /usr/local/include/luajit-2.0
+COPY --from=build /usr/local/share/luajit-$LUAJIT_VER /usr/local/share/luajit-$LUAJIT_VER
+COPY --from=build /usr/local/lib/lua/                 /usr/local/lib/lua/
 RUN mkdir ../logs ../conf && touch ../logs/error.log && chmod +x nginx
 CMD ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;"]
