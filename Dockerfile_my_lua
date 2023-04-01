@@ -36,6 +36,7 @@ RUN wget https://nginx.org/download/nginx-$NGINX_VER.tar.gz \
     && make install
 
 FROM debian:9
+ENV LUAJIT_VER=2.0.5
 WORKDIR /usr/local/nginx/sbin
 COPY --from=build /usr/local/nginx/sbin/nginx .
 COPY --from=build /usr/local/lib/libluajit-5.1.so.2   /usr/local/lib/
